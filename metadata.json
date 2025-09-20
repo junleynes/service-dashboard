@@ -1,0 +1,5 @@
+{
+  "name": "Service Dashboard",
+  "description": "A modern dashboard with KPI cards to display and manage a list of web applications and services, featuring configurable icons and an Apache reverse proxy configuration detector.",
+  "requestFramePermissions": []
+}

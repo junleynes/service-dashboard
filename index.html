@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF--8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Service Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+      /* For Webkit-based browsers (Chrome, Safari) */
+      ::-webkit-scrollbar {
+        width: 8px;
+      }
+
+      ::-webkit-scrollbar-track {
+        background: var(--bg-primary); 
+      }
+
+      ::-webkit-scrollbar-thumb {
+        background-color: var(--bg-tertiary);
+        border-radius: 10px;
+        border: 2px solid var(--bg-primary);
+      }
+      
+      @keyframes fade-in {
+        from { opacity: 0; transform: translateY(-10px); }
+        to { opacity: 1; transform: translateY(0); }
+      }
+
+      .animate-fade-in {
+        animation: fade-in 0.5s ease-out forwards;
+      }
+      
+      :root.light {
+        --bg-primary: #F3F4F6; /* gray-100 */
+        --bg-secondary: #FFFFFF; /* white */
+        --bg-tertiary: #E5E7EB; /* gray-200 */
+        --text-primary: #111827; /* gray-900 */
+        --text-secondary: #4B5563; /* gray-600 */
+        --text-tertiary: #6B7280; /* gray-500 */
+        --border-primary: #D1D5DB; /* gray-300 */
+      }
+      :root.dark {
+        --bg-primary: #111827; /* gray-900 */
+        --bg-secondary: #1F2937; /* gray-800 */
+        --bg-tertiary: #374151; /* gray-700 */
+        --text-primary: #F9FAFB; /* gray-50 */
+        --text-secondary: #9CA3AF; /* gray-400 */
+        --text-tertiary: #6B7280; /* gray-500 */
+        --border-primary: #374151; /* gray-700 */
+      }
+      body {
+          background-color: var(--bg-primary);
+          color: var(--text-primary);
+          transition: background-color 0.3s ease, color 0.3s ease;
+      }
+    </style>
+  <script type="importmap">
+{
+  "imports": {
+    "react": "https://aistudiocdn.com/react@^19.1.1",
+    "react/": "https://aistudiocdn.com/react@^19.1.1/",
+    "react-dom/": "https://aistudiocdn.com/react-dom@^19.1.1/"
+  }
+}
+</script>
+</head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/index.tsx"></script>
+  </body>
+</html>
