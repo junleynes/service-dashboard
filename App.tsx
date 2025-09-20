@@ -1,134 +1,111 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import { LinkItem } from './types';
-import { useLocalStorage } from './hooks/useLocalStorage';
 import Header from './components/Header';
 import Dashboard from './components/Dashboard';
 import AddLinkModal from './components/AddLinkModal';
 import SettingsPage from './components/SettingsPage';
 import { useTheme } from './hooks/useTheme';
 
-
-const INITIAL_LINKS: LinkItem[] = [
-  {
-    id: '1',
-    title: 'Uptime Kuma',
-    url: 'http://status.local',
-    description: 'Self-hosted monitoring tool for all your services.',
-    icon: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjU2IiBoZWlnaHQ9IjI1NiIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48Y2lyY2xlIGN4PSIxMjgiIGN5PSIxMjgiIHI9IjEyOCIgZmlsbD0iIzE2MTYxOCIvPjxwYXRoIGZpbGw9IiM1MEQzQTkiIGQ9Ik0xMjggMjA2Yy00My4wMzMgMC03OC0zNC45NjctNzgtNzhzMzQuOTY3LTc4IDc4LTc4IDc4IDM0Ljk2NyA3OCA3OC0zNC45NjcgNzgtNzhaIi8+PHBhdGggZmlsbD0iIzE2MTYxOCIgZD0iTTE2MS4xMjkgMTU3LjY3MmMtNi40NzIgMS4xMTUtMTMuMDcxIDEuNzI0LTE5LjgyMiAxLjcyNC0xNS41MzIgMC0yOS4xNzItNC41MzctNDEuNTI0LTEyLjMyMy0yLjU0LTEuNzA0LTQuNzc1LTMuNzItNi41NjctNi4wMDcgMy4wMDQtNC42MzYgNy4xMjUtOC43MTIgMTIuMDYtMTEuOTI3IDguNTQtNS41NzIgMTguODY0LTguNzM4IDI5Ljk4OC04LjczOCA4LjY0NSAwIDE2Ljc4MyAyLjA1MyAyMy44MzggNS43MzIgMS44NjcuOTYgMy42NzcgMi4wMDggNS40MDcgMy4xNDIgMS4wNTQgMS44MTQgMS45MzggMy43MzggMi42MzEgNS43NDgtMy4xMDYgMi4yMTUtNi41ODMgNC4xMDItMTAuMzU4IDUuNTg5WiIvPjxwYXRoIGZpbGw9IiNGRkYiIGQ9Ik0xNDQuNDEzIDEyMy44MDNjLjU2Ni0yLjQxMi44NzEtNC45MzEuODcxLTcuNTQ4IDAtMTEuOTY0LTUuNDEzLTIyLjc3LTEzLjg3My0yOS45NzgtMi4zMDMtMS45ODUtNC44NjktMy43MzMtNy42NjEtNS4xOTYtNC4wMDItMi4xNDMtOC40NDgtMy4yMjMtMTMuMjI1LTMuMjIzLTguMjYyIDAtMTUuODUgMi43MjMtMjIuMDY0IDcuNDQyLTUuNTUgNC4yMDItOS44NTggOS45MTUtMTEuOTg1IDE2LjQ0IDQuNDM1LTMuMDQ4IDkuNjYyLTQuODEgMTUuMzItNC44MSAxMi4zNTggMCAyMi45MzYgNi40NjIgMjguNjIgMTUuOTQ2Yy0xMS4wMjggNS44MzMtMTguMDk3IDE3LjQxOC0xOC4wOTcgMzAuODU3IDAgMi4zOTIuMjUgNC43MjMuNzMgNi45NzQgNy4zNTIgMTAuOTIgMTkuNDIzIDE4LjA2NyAzMy4xMzMgMTguMDY3IDE0LjQzMyAwIDI3LjE0My03Ljg5MiAzNC4yMTUtMTkuNTQyLTIuODYyLTYuMjEzLTguMDcxLTExLjQyLTE0LjU2LTE0LjYxWiIvPjwvc3ZnPg==',
-    type: 'service',
-    enabled: true,
-    category: 'Monitoring',
-    proxyConfig: {
-      target: 'http://localhost:3001',
-      enableSsl: false,
-      sslCertPath: '',
-      sslKeyPath: '',
-      enableWebSockets: true,
-    }
-  },
-   {
-    id: '2',
-    title: 'Bitwarden (Vaultwarden)',
-    url: 'http://vault.local',
-    description: 'Self-hosted and open source password manager.',
-    icon: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjU2IiBoZWlnaHQ9IjI1NiIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cGF0aCBkPSJNMjUwLjY2NyAxMjEuNjA2VjY0LjQ4N2wtNTYuODMyLTMwLjc3YS45NzIuOTcyIDAgMCAwLS45NzIgMGwtNTYuODMzIDMwLjc2OWEyLjA4MyAyLjA4MyAwIDAgMC0xLjA0MiAxLjgzM3Y0Ny4xMDVsLTQxLjYxIDIzLjg1MmEuODQ4Ljg0OCAwIDAgMC0uNDM0Ljc0N3YxMi41NTNhLjg0OC44NDggMCAwIDAgLjQzNC43NDdsNDEuNTY4IDIzLjkxMXY0Ni45OTdjMCAuODQuNSAxLjYyIDEuMjUgMS45NDNsNTYuNzggMzAuNjU4Yy4yMy4xMjQuNDc4LjE4Ni43MjYuMTg2YT MS4wMDYgMS4wMDYgMCAwIDAgLjcyNi0uMjg4bDU2Ljc4LTMwLjU1MmEuOTk0Ljk5NCAwIDAgMCAuNzMyLTEuODM0di01NC4yMmwyOS4yMDMtMTYuNzY0Yy4yNTMtLjE0Ni40MTMtLjQyMi40MTMtLjcyOHYtMTIuNTU1Yy4wMDItLjMwNi0uMTU5LS41ODItLjQxMy0uNzI4bC0yOS4xNi0xNi44MjRaIiBmaWxsPSIjMTc1RTgxIi8+PHBhdGggZD0iTTE5My44MzUgMzMuNzE3IDM4LjY1十六章ExLjYwNmw0Mi4wNDMgMjQuMjE2IDEzNi42NzgtNzguMjg0YS45NzIuOTcyIDAgMCAwLS4yMS0xLjczN2wtMjMuMzMzLTEzLjUxM1ptLTk2LjMyIDk0LjIxOCAxOC44OTgtMTAuOTExIDExLjA0MSA2LjM2Ny0xOC44OTggMTAuOTExLTExLjA0MS02LjM2N1ptMjIuMDggNDMuMDc4LTQ0LjE2Ni0yNS40NjIgMTEuMDQtNi4zNjcgNDQuMTY2IDI1LjQ2Mi0xMS4wNCA2LjM2N1ptMTEuNzY3LTIwLjM3MS0xOC44OTgtMTAuOTExIDExLjA0LTYuMzY3IDE4Ljg5OCAxMC45MTEtMTEuMDQgNi4zNjZ6bTQ0LjE2NiAyNS40NjItMTEuMDQtNi4zNjcgMTguODk4LTEwLjkxMSAxMS4wNCA2LjM2Ny0xOC44OTggNS42MjVaIiBmaWxsPSIjOThDQUZGIi8+PHBhdGggZD0iTTM4LjY1十六章ExLjYwNiAxOTMuODM1IDMzLjcxN2wyMy4zMzMgMTMuNTEzYy0yLjc5IDEuNjA4LTE0NC40OSA4Mi40ODgtMTQ0LjQ5IDgyLjQ4OGwtMzIuMDU3LTE4LjRhLjg0OC44NDggMCAwIDEtLjQzNC0uNzQ3di0xMi41NTRjLS4wMDEtLjMyNiAuMTU4LS42MDMuNDEzLS43NDhaIiBmaWxsPSIjNTY2MjEyIi8+PC9zdmc+',
-    type: 'service',
-    enabled: true,
-    category: 'Security',
-     proxyConfig: {
-      target: 'http://localhost:8088',
-      enableSsl: false,
-      sslCertPath: '',
-      sslKeyPath: '',
-      enableWebSockets: true,
-    }
-  },
-  {
-    id: '3',
-    title: 'Moodle LMS',
-    url: 'https://moodle.example.com',
-    description: 'Central course management and learning platform.',
-    icon: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjU2IiBoZWlnaHQ9IjI1NiIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cGF0aCBkPSJNMjQ5LjM3MyAxMjAuNjMyYy0xLjQ0OC0xNC4yMDItMTMuNjgxLTI2LjQzNS0yNy44ODMtMjcuODgzLTE0LjIwMy0xLjQ0Ny0yNy43NDEgNC41MzctMzYuNDU1IDE1LjYxNmwtNzMuNDIzIDc2LjY2OWE3LjM2NyA3LjM2NyAwIDAgMS0xMC42NzQgMGwtMTMuODEtMTQuNDE2YTM3LjA0NiAzNy4wNDYgMCAwIDAtMjYuMTQyLTEwLjg2NCAzNy4wNDYgMzcuMDQ2IDAgMCAwLTI2LjE0MiAxMC44NjQgMzcuMDQ2IDM3LjA0NiAwIDAgMC0xMC44NjQgMjYuMTQyYzAgMTIuMTIzIDYuMzU1IDIyLjY3IDE1LjYxNiAzMC4zMDlsMzMuNDEzIDMzLjQxM2ExMC40MDggMTAuNDA4IDAgMCAwIDcuMzY3IDMuMDUyaDIuMDg0YTEwLjQwOCAxMC40MDggMCAwIDAgNy4zNjctMy4wNTJsMTYuNzY4LTE2Ljc2OGExMC40MDggMTAuNDA4IDAgMCAxIDE0LjczMyAwbDU0LjgwNyA1NC44MDhhMTAuNDA4IDEwLjQwOCAwIDAgMCAxNC43MzQgMEwyNDYuMzIgMTY3LjAzNGMzMC4xNjgtMzIuMDk1IDE4LjQzLjg2OCAyLjg4My00Ni4yMy0uMTctLjE3LS4zNC0uMzQtLjUxLS41MWEzNy4xMjIgMzcuMTIyIDAgMCAwLTEzLjU4OS05LjY0NCAzNy4xMjIgMzcuMTIyIDAgMCAwLTE2LjkzOC0zLjIzNWMtNC4xNjggMC04LjE2Ny44NS0xMS44NDIgMi4zOUwxNTQuNCAxMjEuNDgyYy0xLjcxIDEuNTQtMy4wOCAzLjYxLTQuMDYgNS45N2wtMTIuMDExIDI5LjExOWE1LjIwNSA1LjIwNSAwIDAgMS04LjY4LS44NWwtMjYuMTQyLTYzLjkwOWMuMDMyLS4xMTIuMDYtLjIyNC4wOS0uMzM2IDEuMjc4LTMuNzQgMy42NTUtNi45NzcgNi44MzYtOS40NzYgMTUuMDgtMTEuODQyIDM1LjU3My03Ljg1MyA0Ni4wNTktMTAuNjk0IDYuMTgxLTEuNjg2IDE0LjI4Ny0yLjQxMyAyMi41NjIuNTEgMTMuMDQgNC42NzUgMjEuNTIgMTcuOTk1IDIyLjQ3OCAzMS43ODdaIiBmaWxsPSIjRjY3QjIwIi8+PC9zdmc+',
-    type: 'link',
-    enabled: true,
-    category: 'Education',
-  },
-  {
-    id: '4',
-    title: 'Portainer CE',
-    url: 'http://docker.local',
-    description: 'Lightweight management UI for Docker environments.',
-    icon: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjU2IiBoZWlnaHQ9IjI1NiIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cGF0aCBkPSJNMjQ1LjMzMyAxMDguMDIyYy02LjM1Ny0zOS4xOTQtNDAuNjA0LTcwLjAyMi04Mi4yNC03MC4wMjItNDEuNjM1IDAtNzUuODgzIDMwLjgzOC04Mi4yNCA3MC4wMjJINzguNnY3NS42MDNoMTguNjcxdjM0LjM1NGg1OC4yNXYtMzQuMzU0aDE4LjY3MXYtNzUuNjAzaC0yLjEzNVoiIGZpbGw9IiMxM0JFRDAiLz48cGF0aCBkPSJNNzguNiAxODMuNjI1VjEwOC4wMjJIMTEuMjQ1Yy02LjM1NyAzOS4xOTQtMi4zNDcgODAuMzkyIDIyLjU4MiAxMDkuMDQzIDMyLjYyMyAzNy44NDIgODMuMzIgNDQuMTkzIDEyMy44NDggMTUuNjY3bDI4LjEwNy0yOC4yNDMtMzMuMDU3LTMwLjg2NVoiIGZpbGw9IiMxM0JFRDAiIG9wYWNpdHk9Ii42Ii8+PC9zdmc+',
-    type: 'service',
-    enabled: true,
-    category: 'Infrastructure',
-     proxyConfig: {
-      target: 'http://localhost:9000',
-      enableSsl: false,
-      sslCertPath: '',
-      sslKeyPath: '',
-      enableWebSockets: false,
-    }
-  },
-  {
-    id: '5',
-    title: 'Home Assistant',
-    url: 'http://home.local',
-    description: 'Open source home automation that puts local control first.',
-    icon: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjU2IiBoZWlnaHQ9IjI1NiIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cGF0aCBkPSJNMjQ2LjgzIDEzMS45MDNjLTYuNzg2LTM4LjA1Ny0zOS4xMTYtNjcuMDI0LTc5Ljc4My02Ny4wMjQtMzkuOTY2IDAtNzMuMDk1IDI4Ljk2Ny03OS43ODIgNjcuMDI0SDcuNDg3djY5LjM4aDEzLjc2OHYyOS41NTNoNDguMTI4di0yOS41NTNoOTUuODgydjI5LjU1M2g0OC4xMjd2LTI5LjU1M2gxMy43Njd2LTY5LjM4aC0xMi4yMTRaIiBmaWxsPSIjNDFCQUZGIi8+PHBhdGggZD0iTTguMTUgMTMxLjkwM2M2Ljc4Ni0zOC4wNTYgNDQuMTg2LTY4LjA3IDg3LjczOC02OC4wNyA0My41NTIgMCA4MC45NTIgMy4wNDcgODcuNzM4IDY4LjA3SDguMTVabTIzMy4yNjYgNDMuMzU2Yy0xMS43LTEzLjEzMi0zNC41MjItMjEuNDIyLTU2LjczOC0yMS40MjItMjIuMjE2IDAtNDUuMDM4IDguMjktNTYuNzM4IDIxLjQyMnYtMjIuOTY3aDExMy40NzZ2MjIuOTY3WiIgZmlsbD0iI0ZGRiIgb3BhY2l0eT0iLjc1KSIvPjwvc3ZnPg==',
-    type: 'service',
-    enabled: true,
-    category: 'Home Automation',
-     proxyConfig: {
-      target: 'http://localhost:8123',
-      enableSsl: false,
-      sslCertPath: '',
-      sslKeyPath: '',
-      enableWebSockets: true,
-    }
-  },
-  {
-    id: '6',
-    title: 'React Documentation',
-    url: 'https://react.dev',
-    description: 'The official documentation for the React library.',
-    icon: 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9Ii0xMS41IC0xMC4yMzE3NCAyMyAyMC40NjM0OCI+CiAgPHRpdGxlPlJlYWN0IExvZ288L3RpdGxlPgogIDxjaXJjbGUgY3g9IjAiIGN5PSIwIiByPSIyLjA1IiBmaWxsPSIjNjFkYWZiIi8+CiAgPGcgc3Ryb2tlPSIjNjFkYWZiIiBzdHJva2Utd2lkdGg9IjEiIGZpbGw9Im5vbmUiPgogICAgPGVsbGlwc2Ugcng9IjExIiByeT0iNC4yIi8+CiAgICA8ZWxsaXBzZSByeD0iMTEiIHJ5PSI0LjIiIHRyYW5zZm9ybT0icm90YXRlKDYwKSIvPgogICAgPGVsbGlwc2Ugcng9IjExIiByeT0iNC4yIiB0cmFuc2Zvcm09InJvdGF0ZSgxMjApIi8+CiAgPC9nPgo8L3N2Zz4K',
-    type: 'link',
-    enabled: false,
-    category: 'Development',
-  },
-];
+interface AppData {
+  appName: string;
+  links: LinkItem[];
+}
 
 function App() {
   useTheme(); // Initialize theme hook to set the theme on load
-  const [appName, setAppName] = useLocalStorage<string>('dashboard-app-name', 'Service Dashboard');
-  const [links, setLinks] = useLocalStorage<LinkItem[]>('dashboard-links', INITIAL_LINKS);
+  const [appData, setAppData] = useState<AppData>({ appName: 'Service Dashboard', links: [] });
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingLink, setEditingLink] = useState<LinkItem | null>(null);
   const [creationType, setCreationType] = useState<'link' | 'service'>('link');
   const [searchQuery, setSearchQuery] = useState('');
   const [view, setView] = useState<'dashboard' | 'settings'>('dashboard');
 
+  const fetchData = useCallback(async () => {
+    try {
+      setIsLoading(true);
+      const response = await fetch('/api/data');
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.details || 'Failed to fetch data from server.');
+      }
+      const data: AppData = await response.json();
+      setAppData(data);
+      setError(null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'An unknown error occurred.');
+      console.error("Fetch error:", err);
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
-    document.title = appName;
-  }, [appName]);
+    fetchData();
+  }, [fetchData]);
 
-  const handleAddLink = useCallback((link: Omit<LinkItem, 'id'>) => {
-    setLinks(prevLinks => [...prevLinks, { ...link, id: crypto.randomUUID(), enabled: true }]);
-  }, [setLinks]);
+  useEffect(() => {
+    if (appData?.appName) {
+      document.title = appData.appName;
+    }
+  }, [appData?.appName]);
   
-  const handleUpdateLink = useCallback((updatedLink: LinkItem) => {
-    setLinks(prevLinks => prevLinks.map(link => link.id === updatedLink.id ? updatedLink : link));
-    setEditingLink(null);
-  }, [setLinks]);
+  const handleUpdateLink = useCallback(async (updatedLink: LinkItem) => {
+    try {
+        const response = await fetch(`/api/links/${updatedLink.id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(updatedLink),
+        });
+        if (!response.ok) throw new Error('Failed to update link');
+        const savedLink = await response.json();
+        setAppData(prevData => ({
+            ...prevData,
+            links: prevData.links.map(link => link.id === savedLink.id ? savedLink : link),
+        }));
+        setEditingLink(null);
+    } catch (err) {
+        console.error("Update error:", err);
+    }
+  }, []);
 
-  const handleDeleteLink = useCallback((id: string) => {
-    setLinks(prevLinks => prevLinks.filter(link => link.id !== id));
-  }, [setLinks]);
+  const handleDeleteLink = useCallback(async (id: string) => {
+    try {
+        const response = await fetch(`/api/links/${id}`, { method: 'DELETE' });
+        if (!response.ok) throw new Error('Failed to delete link');
+        setAppData(prevData => ({
+            ...prevData,
+            links: prevData.links.filter(link => link.id !== id),
+        }));
+    } catch (err) {
+        console.error("Delete error:", err);
+    }
+  }, []);
 
-  const handleToggleLink = useCallback((id: string) => {
-    setLinks(prevLinks => prevLinks.map(link => link.id === id ? { ...link, enabled: !link.enabled } : link));
-  }, [setLinks]);
+  const handleToggleLink = useCallback(async (id: string) => {
+    const linkToToggle = appData.links.find(link => link.id === id);
+    if (linkToToggle) {
+        await handleUpdateLink({ ...linkToToggle, enabled: !linkToToggle.enabled });
+    }
+  }, [appData.links, handleUpdateLink]);
+
+  const handleAppNameChange = useCallback(async (name: string) => {
+    setAppData(prevData => ({ ...prevData, appName: name }));
+    try {
+        const response = await fetch('/api/settings/appName', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ appName: name }),
+        });
+        if (!response.ok) throw new Error('Failed to update app name');
+    } catch (err) {
+        console.error("App name update error:", err);
+        // Optionally revert if API call fails
+        fetchData(); 
+    }
+  }, [fetchData]);
 
   const openAddModal = (type: 'link' | 'service') => {
     setEditingLink(null);
@@ -146,41 +123,66 @@ function App() {
     setEditingLink(null);
   };
 
-  const handleSaveLink = (linkData: Omit<LinkItem, 'id' | 'enabled'>) => {
+  const handleSaveLink = async (linkData: Omit<LinkItem, 'id'>) => {
     if (editingLink) {
-      handleUpdateLink({ ...editingLink, ...linkData });
+      await handleUpdateLink({ ...editingLink, ...linkData });
     } else {
-      handleAddLink({ ...linkData, enabled: true });
+       // Since this is a new link, we can add it via the batch endpoint.
+       // The server will assign a final ID.
+       const newLink = { ...linkData, id: crypto.randomUUID() };
+       try {
+            const response = await fetch('/api/links/batch', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify([newLink]),
+            });
+            if (!response.ok) throw new Error('Failed to add new link');
+            const addedLinks = await response.json();
+            setAppData(prev => ({...prev, links: [...prev.links, ...addedLinks]}));
+       } catch(err) {
+            console.error("Save new link error:", err);
+       }
     }
     closeModal();
   };
 
-  const handleAddParsedLinks = useCallback((parsedLinks: Omit<LinkItem, 'id' | 'type' | 'proxyConfig' | 'enabled' | 'category'>[]) => {
-      setLinks(prevLinks => {
-        const existingUrls = new Set(prevLinks.map(l => l.url));
-        const newUniqueLinks = parsedLinks
-            .filter(pl => !existingUrls.has(pl.url))
-            .map(pl => ({
-                ...pl, 
-                id: crypto.randomUUID(), 
-                type: 'service' as const,
-                enabled: true,
-                category: 'Imported',
-                proxyConfig: {
-                    target: 'http://localhost:8000', // Default target, user should edit
-                    enableSsl: false,
-                    sslCertPath: '',
-                    sslKeyPath: '',
-                    enableWebSockets: false,
-                }
-            }));
-        return [...prevLinks, ...newUniqueLinks];
-    });
-    // For better UX, switch back to the dashboard after adding links
-    setView('dashboard'); 
-  }, [setLinks]);
+  const handleAddParsedLinks = useCallback(async (parsedLinks: Omit<LinkItem, 'id' | 'type' | 'proxyConfig' | 'enabled' | 'category'>[]) => {
+      const existingUrls = new Set(appData.links.map(l => l.url));
+      const newUniqueLinks = parsedLinks
+          .filter(pl => !existingUrls.has(pl.url))
+          .map(pl => ({
+              ...pl, 
+              id: crypto.randomUUID(), 
+              type: 'service' as const,
+              enabled: true,
+              category: 'Imported',
+              proxyConfig: {
+                  target: 'http://localhost:8000',
+                  enableSsl: false,
+                  sslCertPath: '',
+                  sslKeyPath: '',
+                  enableWebSockets: false,
+              }
+          }));
+        
+      if (newUniqueLinks.length > 0) {
+        try {
+            const response = await fetch('/api/links/batch', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(newUniqueLinks)
+            });
+            if (!response.ok) throw new Error('Failed to add parsed links');
+            const addedLinks = await response.json();
+            setAppData(prev => ({...prev, links: [...prev.links, ...addedLinks]}));
+        } catch(err) {
+            console.error("Add parsed links error:", err);
+        }
+      }
+      setView('dashboard'); 
+  }, [appData.links]);
 
-  const filteredLinks = links.filter(link => {
+  const filteredLinks = appData.links.filter(link => {
     const query = searchQuery.toLowerCase();
     return (
       link.title.toLowerCase().includes(query) ||
@@ -190,11 +192,23 @@ function App() {
     );
   });
 
+  if (isLoading) {
+    return <div className="min-h-screen bg-[--bg-primary] text-[--text-primary] flex items-center justify-center">Loading dashboard...</div>;
+  }
+
+  if (error) {
+    return <div className="min-h-screen bg-red-900/20 text-red-300 p-8">
+      <h2 className="text-2xl font-bold mb-4">Error loading dashboard</h2>
+      <p>Could not connect to the backend server. Please ensure the server is running by executing <code className="bg-black/50 px-2 py-1 rounded">npm start</code> in your terminal.</p>
+      <pre className="mt-4 bg-black/50 p-4 rounded-lg text-sm whitespace-pre-wrap">{error}</pre>
+      <button onClick={fetchData} className="mt-6 px-4 py-2 bg-cyan-500 rounded-lg">Retry Connection</button>
+    </div>;
+  }
 
   return (
     <div className="min-h-screen bg-[--bg-primary] text-[--text-primary] font-sans">
       <Header 
-        appName={appName}
+        appName={appData.appName}
         searchQuery={searchQuery} 
         setSearchQuery={setSearchQuery} 
         onSettingsClick={() => setView('settings')}
@@ -208,9 +222,9 @@ function App() {
             />
         ) : (
             <SettingsPage 
-                appName={appName}
-                onAppNameChange={setAppName}
-                links={links}
+                appName={appData.appName}
+                onAppNameChange={handleAppNameChange}
+                links={appData.links}
                 onBack={() => setView('dashboard')}
                 onAddLinks={handleAddParsedLinks}
                 onOpenAddModal={openAddModal}

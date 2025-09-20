@@ -39,7 +39,7 @@ const Dashboard: React.FC<DashboardProps> = ({ links, onUpdate, searchQuery }) =
         <div className="space-y-12">
           {services.length > 0 && (
             <section>
-              <h2 className="text-2xl font-bold text-[--text-secondary] mb-4 border-b border-[--border-primary]/30 pb-2">
+              <h2 className="text-2xl font-bold text-[--text-secondary] mb-4">
                 Services
               </h2>
               {renderGrid(services)}
@@ -48,7 +48,7 @@ const Dashboard: React.FC<DashboardProps> = ({ links, onUpdate, searchQuery }) =
 
           {regularLinks.length > 0 && (
             <section>
-              <h2 className="text-2xl font-bold text-[--text-secondary] mb-4 border-b border-[--border-primary]/30 pb-2">
+              <h2 className="text-2xl font-bold text-[--text-secondary] mb-4">
                 Links
               </h2>
               {renderGrid(regularLinks)}
