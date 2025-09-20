@@ -1,72 +1,142 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { LinkItem } from './types';
 import Header from './components/Header';
 import Dashboard from './components/Dashboard';
 import AddLinkModal from './components/AddLinkModal';
 import SettingsPage from './components/SettingsPage';
 import { useTheme } from './hooks/useTheme';
-import { useLocalStorage } from './hooks/useLocalStorage';
 
 interface AppData {
   appName: string;
   links: LinkItem[];
 }
 
-const initialData: AppData = {
-  "appName": "Service Dashboard",
-  "links": [
-    { "id": "1", "title": "Uptime Kuma", "url": "http://status.local", "description": "Self-hosted monitoring tool for all your services.", "icon": "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjU2IiBoZWlnaHQ9IjI1NiIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48Y2lyY2xlIGN4PSIxMjgiIGN5PSIxMjgiIHI9IjEyOCIgZmlsbD0iIzE2MTYxOCIvPjxwYXRoIGZpbGw9IiM1MEQzQTkiIGQ9Ik0xMjggMjA2Yy00My4wMzMgMC03OC0zNC45NjctNzgtNzhzMzQuOTY3LTc4IDc4LTc4IDc4IDM0Ljk2NyA3OCA3OC0zNC45NjcgNzgtNzhaIi8+PHBhdGggZmlsbD0iIzE2MTYxOCIgZD0iTTE2MS4xMjkgMTU3LjY3MmMtNi40NzIgMS4xMTUtMTMuMDcxIDEuNzI0LTE5LjgyMiAxLjcyNC0xNS41MzIgMC0yOS4xNzItNC41MzctNDEuNTI0LTEyLjMyMy0yLjU0LTEuNzA0LTQuNzc1LTMuNzItNi41NjctNi4wMDcgMy4wMDQtNC42MzYgNy4xMjUtOC43MTIgMTIuMDYtMTEuOTI3IDguNTQtNS41NzIgMTguODY0LTguNzM4IDI5Ljk4OC04LjczOCA4LjY0NSAwIDE2Ljc4MyAyLjA1MyAyMy44MzggNS43MzIgMS44NjcuOTYgMy42NzcgMi4wMDggNS40MDcgMy4xNDIgMS4wNTQgMS44MTQgMS45MzggMy43MzggMi42MzEgNS43NDgtMy4xMDYgMi4yMTUtNi41ODMgNC4xMDItMTAuMzU4IDUuNTg5WiIvPjxwYXRoIGZpbGw9IiNGRkYiIGQ9Ik0xNDQuNDEzIDEyMy44MDNjLjU2Ni0yLjQxMi44NzEtNC45MzEuODcxLTcuNTQ4IDAtMTEuOTY0LTUuNDEzLTIyLjc3LTEzLjg3My0yOS45NzgtMi4zMDMtMS45ODUtNC44NjktMy43MzMtNy42NjEtNS4xOTYtNC4wMDItMi4xNDMtOC40NDgtMy4yMjMtMTMuMjI1LTMuMjIzLTguMjYyIDAtMTUuODUgMi43MjMtMjIuMDY0IDcuNDQyLTUuNTUgNC4yMDItOS44NTggOS45MTUtMTEuOTg1IDE2LjQ0IDQuNDM1LTMuMDQ4IDkuNjYyLTQuODEgMTUuMzItNC44MSAxMi4zNTggMCAyMi45MzYgNi40NjIgMjguNjIgMTUuOTQ2Yy0xMS4wMjggNS44MzMtMTguMDk3IDE3LjQxOC0xOC4wOTcgMzAuODU3IDAgMi4zOTIuMjUgNC43MjMuNzMgNi45NzQgNy4zNTIgMTAuOTIgMTkuNDIzIDE4LjA2NyAzMy4xMzMgMTguMDY3IDE0LjQzMyAwIDI3LjE0My03Ljg5MiAzNC4yMTUtMTkuNTQyLTIuODYyLTYuMjEzLTguMDcxLTExLjQyLTE0LjU2LTE0LjYxWiIvPjwvc3ZnPg==", "type": "service", "enabled": true, "category": "Monitoring", "proxyConfig": { "target": "http://localhost:3001", "enableSsl": false, "sslCertPath": "", "sslKeyPath": "", "enableWebSockets": true } },
-    { "id": "2", "title": "Bitwarden (Vaultwarden)", "url": "http://vault.local", "description": "Self-hosted and open source password manager.", "icon": "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjU2IiBoZWlnaHQ9IjI1NiIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cGF0aCBkPSJNMjUwLjY2NyAxMjEuNjA2VjY0LjQ4N2wtNTYuODMyLTMwLjc3YS45NzIuOTcyIDAgMCAwLS45NzIgMGwtNTYuODMzIDMwLjc2OWEyLjA4MyAyLjA4MyAwIDAgMC0xLjA0MiAxLjgzM3Y0Ny4xMDVsLTQxLjYxIDIzLjg1MmEuODQ4Ljg0OCAwIDAgMC0uNDM0Ljc0N3YxMi41NTNhLjg0OC44NDggMCAwIDAgLjQzNC43NDdsNDEuNTY4IDIzLjkxMXY0Ni45OTdjMCAuODQuNSAxLjYyIDEuMjUgMS45NDNsNTYuNzggMzAuNjU4Yy4yMy4xMjQuNDc4LjE4Ni43MjYuMTg2YT MS4wMDYgMS4wMDYgMCAwIDAgLjcyNi0uMjg4bDU2Ljc4LTMwLjU1MmEuOTk0Ljk5NCAwIDAgMCAuNzMyLTEuODM0di01NC4yMmwyOS4yMDMtMTYuNzY0Yy4yNTMtLjE0Ni40MTMtLjQyMi40MTMtLjcyOHYtMTIuNTU1Yy4wMDItLjMwNi0uMTU5LS41ODItLjQxMy0uNzI4bC0yOS4xNi0xNi44MjRaIiBmaWxsPSIjMTc1RTgxIi8+PHBhdGggZD0iTTE5My44MzUgMzMuNzE3IDM4LjY1十六章ExLjYwNmw0Mi4wNDMgMjQuMjE2IDEzNi42NzgtNzguMjg0YS45NzIuOTcyIDAgMCAwLS4yMS0xLjczN2wtMjMuMzMzLTEzLjUxM1ptLTk2LjMyIDk0LjIxOCAxOC44OTgtMTAuOTExIDExLjA0MSA2LjM2Ny0xOC44OTggMTAuOTExLTExLjA0MS02LjM2N1ptMjIuMDggNDMuMDc4LTQ0LjE2Ni0yNS40NjIgMTEuMDQtNi4zNjcgNDQuMTY2IDI1LjQ2Mi0xMS4wNCA2LjM2N1ptMTEuNzY3LTIwLjM3MS0xOC44OTgtMTAuOTExIDExLjA0LTYuMzY3IDE4Ljg5OCAxMC45MTEtMTEuMDQgNi4zNjZ6bTQ0LjE2NiAyNS40NjItMTEuMDQtNi4zNjcgMTguODk4LTEwLjkxMSAxMS4wNCA2LjM2Ny0xOC44OTggNS42MjVaIiBmaWxsPSIjOThDQUZGIi8+PHBhdGggZD0iTTM4LjY1十六章ExLjYwNiAxOTMuODM1IDMzLjcxN2wyMy4zMzMgMTMuNTEzYy0yLjc5IDEuNjA4LTE0NC40OSA4Mi40ODgtMTQ0LjQ5IDgyLjQ4OGwtMzIuMDU3LTE4LjRhLjg0OC44NDggMCAwIDEtLjQzNC0uNzQ3di0xMi41NTRjLS4wMDEtLjMyNiAuMTU4LS4xMDMuNDEzLS43NDhaIiBmaWxsPSIjNTY2MjEyIi8+PC9zdmc+", "type": "service", "enabled": true, "category": "Security", "proxyConfig": { "target": "http://localhost:8088", "enableSsl": false, "sslCertPath": "", "sslKeyPath": "", "enableWebSockets": true } },
-    { "id": "3", "title": "Moodle LMS", "url": "https://moodle.example.com", "description": "Central course management and learning platform.", "icon": "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjU2IiBoZWlnaHQ9IjI1NiIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cGF0aCBkPSJNMjQ5LjM3MyAxMjAuNjMyYy0xLjQ0OC0xNC4yMDItMTMuNjgxLTI2LjQzNS0yNy44ODMtMjcuODgzLTE0LjIwMy0xLjQ0Ny0yNy43NDEgNC41MzctMzYuNDU1IDE1LjYxNmwtNzMuNDIzIDc2LjY2OWE3LjM2NyA3LjM2NyAwIDAgMS0xMC42NzQgMGwtMTMuODEtMTQuNDE2YTM3LjA0NiAzNy4wNDYgMCAwIDAtMjYuMTQyLTEwLjg2NCAzNy4wNDYgMzcuMDQ2IDAgMCAwLTI2LjE0MiAxMC44NjQgMzcuMDQ2IDM3LjA0NiAwIDAgMC0xMC44NjQgMjYuMTQyYzAgMTIuMTIzIDYuMzU1IDIyLjY3IDE1LjYxNiAzMC4zMDlsMzMuNDEzIDMzLjQxM2ExMC40MDggMTAuNDA4IDAgMCAwIDcuMzY3IDMuMDUyaDIuMDg0YTEwLjQwOCAxMC40MDggMCAwIDAgNy4zNjctMy4wNTJsMTYuNzY4LTE2Ljc2OGExMC40MDggMTAuNDA4IDAgMCAxIDE0LjczMyAwbDU0LjgwNyA1NC44MDhhMTAuNDA4IDEwLjQwOCAwIDAgMCAxNC43MzQgMEwyNDYuMzIgMTY3LjAzNGMzMC4xNjgtMzIuMDk1IDE4LjQzLjg2OCAyLjg4My00Ni4yMy0uMTctLjE3LS4zNC0uMzQtLjUxLS41MWEzNy4xMjIgMzcuMTIyIDAgMCAwLTEzLjU4OS05LjY0NCAzNy4xMjIgMzcuMTIyIDAgMCAwLTE2LjkzOC0zLjIzNWMtNC4xNjggMC04LjE2Ny44NS0xMS44NDIgMi4zOUwxNTQuNCAxMjEuNDgyYy0xLjcxIDEuNTQtMy4wOCAzLjYxLTQuMDYgNS45N2wtMTIuMDExIDI5LjExOWE1LjIwNSA1LjIwNSAwIDAgMS04LjY4LS44NWwtMjYuMTQyLTYzLjkwOWMuMDMyLS4xMTIuMDYtLjIyNC4wOS0uMzM2IDEuMjc4LTMuNzQgMy42NTUtNi45NzcgNi44MzYtOS40NzYgMTUuMDgtMTEuODQyIDM1LjU3My03Ljg1MyA0Ni4wNTktMTAuNjk0IDYuMTgxLTEuNjg2IDE0LjI4Ny0yLjQxMyAyMi41NjIuNTEgMTMuMDQgNC42NzUgMjEuNTIgMTcuOTk1IDIyLjQ3OCAzMS43ODdaIiBmaWxsPSIjRjY3QjIwIi8+PC9zdmc+", "type": "link", "enabled": true, "category": "Education" },
-    { "id": "4", "title": "Portainer CE", "url": "http://docker.local", "description": "Lightweight management UI for Docker environments.", "icon": "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjU2IiBoZWlnaHQ9IjI1NiIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cGF0aCBkPSJNMjQ1LjMzMyAxMDguMDIyYy02LjM1Ny0zOS4xOTQtNDAuNjA0LTcwLjAyMi04Mi4yNC03MC4wMjItNDEuNjM1IDAtNzUuODgzIDMwLjgzOC04Mi4yNCA3MC4wMjJINzguNnY3NS42MDNoMTguNjcxdjM0LjM1NGg1OC4yNXYtMzQuMzU0aDE4LjY3MXYtNzUuNjAzaC0yLjEzNVoiIGZpbGw9IiMxM0JFRDAiLz48cGF0aCBkPSJNNzguNiAxODMuNjI1VjEwOC4wMjJIMTEuMjQ1Yy02LjM1NyAzOS4xOTQtMi4zNDcgODAuMzkyIDIyLjU4MiAxMDkuMDQzIDMyLjYyMyAzNy44NDIgODMuMzIgNDQuMTkzIDEyMy44NDggMTUuNjY3bDI4LjEwNy0yOC4yNDMtMzMuMDU3LTMwLjg2NVoiIGZpbGw9IiMxM0JFRDAiIG9wYWNpdHk9Ii42Ii8+PC9zdmc+", "type": "service", "enabled": true, "category": "Infrastructure", "proxyConfig": { "target": "http://localhost:9000", "enableSsl": false, "sslCertPath": "", "sslKeyPath": "", "enableWebSockets": false } },
-    { "id": "5", "title": "Home Assistant", "url": "http://home.local", "description": "Open source home automation that puts local control first.", "icon": "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjU2IiBoZWlnaHQ9IjI1NiIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cGF0aCBkPSJNMjQ2LjgzIDEzMS45MDNjLTYuNzg2LTM4LjA1Ny0zOS4xMTYtNjcuMDI0LTc5Ljc4My02Ny4wMjQtMzkuOTY2IDAtNzMuMDk1IDI4Ljk2Ny03OS43ODIgNjcuMDI0SDcuNDg3djY5LjM4aDEzLjc2OHYyOS41NTNoNDguMTI4di0yOS41NTNoOTUuODgydjI5LjU1M2g0OC4xMjd2LTI5LjU1M2gxMy43Njd2LTY5LjM4aC0xMi4yMTRaIiBmaWxsPSIjNDFCQUZGIi8+PHBhdGggZD0iTTguMTUgMTMxLjkwM2M2Ljc4Ni0zOC4wNTYgNDQuMTg2LTY4LjA3IDg3LjczOC02OC4wNyA0My41NTIgMCA4MC45NTIgMy4wNDcgODcuNzM4IDY4LjA3SDguMTVabTIzMy4yNjYgNDMuMzU2Yy0xMS43LTEzLjEzMi0zNC41MjItMjEuNDIyLTU2LjczOC0yMS4四季MjItMjIuMjE2IDAtNDUuMDM4IDguMjktNTYuNzM4IDIxLjQyMnYtMjIuOTY3aDExMy40NzZ2MjIuOTY3WiIgZmlsbD0iI0ZGRiIgb3BhY2l0eT0iLjc1KSIvPjwvc3ZnPg==", "type": "service", "enabled": true, "category": "Home Automation", "proxyConfig": { "target": "http://localhost:8123", "enableSsl": false, "sslCertPath": "", "sslKeyPath": "", "enableWebSockets": true } },
-    { "id": "6", "title": "React Documentation", "url": "https://react.dev", "description": "The official documentation for the React library.", "icon": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9Ii0xMS41IC0xMC4yMzE3NCAyMyAyMC40NjM0OCI+CiAgPHRpdGxlPlJlYWN0IExvZ288L3RpdGxlPgogIDxjaXJjbGUgY3g9IjAiIGN5PSIwIiByPSIyLjA1IiBmaWxsPSIjNjFkYWZiIi8+CiAgPGcgc3Ryb2tlPSIjNjFkYWZiIiBzdHJva2Utd2lkdGg9IjEiIGZpbGw9Im5vbmUiPgogICAgPGVsbGlwc2Ugcng9IjExIiByeT0iNC4yIi8+CiAgICA8ZWxsaXBzZSByeD0iMTEiIHJ5PSI0LjIiIHRyYW5zZm9ybT0icm90YXRlKDYwKSIvPgogICAgPGVsbGlwc2Ugcng9IjExIiByeT0iNC4yIiB0cmFuc2Zvcm09InJvdGF0ZSgxMjApIi8+CiAgPC9nPgo8L3N2Zz4K", "type": "link", "enabled": false, "category": "Development" }
-  ]
-};
+const ConnectionError: React.FC<{ onRetry: () => void; error: string }> = ({ onRetry, error }) => (
+    <div className="flex flex-col items-center justify-center min-h-screen p-4 text-center">
+        <h1 className="text-3xl font-bold text-red-400">Error loading dashboard</h1>
+        <p className="mt-2 text-[--text-secondary]">
+            Could not connect to the backend server. Please ensure the server is running.
+        </p>
+        <p className="mt-4 p-4 text-left bg-[--bg-secondary] rounded-lg font-mono text-sm text-red-400 border border-[--border-primary]">
+            {error}
+        </p>
+        <button
+            onClick={onRetry}
+            className="mt-6 bg-cyan-500 hover:bg-cyan-600 text-white font-bold py-2 px-4 rounded-lg transition-colors duration-200"
+        >
+            Retry Connection
+        </button>
+    </div>
+);
+
+const LoadingState: React.FC = () => (
+    <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+            <svg className="animate-spin h-8 w-8 text-cyan-500 mx-auto" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+            <p className="mt-4 text-lg text-[--text-secondary]">Loading Dashboard...</p>
+        </div>
+    </div>
+);
+
 
 function App() {
-  useTheme(); // Initialize theme hook to set the theme on load
-  const [appData, setAppData] = useLocalStorage<AppData>('dashboard-data', initialData);
-
+  useTheme();
+  const [appData, setAppData] = useState<AppData | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingLink, setEditingLink] = useState<LinkItem | null>(null);
   const [creationType, setCreationType] = useState<'link' | 'service'>('link');
   const [searchQuery, setSearchQuery] = useState('');
   const [view, setView] = useState<'dashboard' | 'settings'>('dashboard');
 
+  const isInitialLoad = useRef(true);
+
+  const fetchData = useCallback(async () => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const response = await fetch('/api/data');
+      if (!response.ok) {
+        throw new Error(`Server responded with ${response.status}: ${response.statusText}`);
+      }
+      const data = await response.json();
+      setAppData(data);
+    } catch (e: any) {
+      setError(e.message || 'An unknown error occurred while fetching data.');
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
+
+  useEffect(() => {
+    if (isInitialLoad.current) {
+        if (!isLoading) {
+            isInitialLoad.current = false;
+        }
+        return;
+    }
+
+    if (appData) {
+        fetch('/api/data', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(appData),
+        }).catch(err => {
+            console.error("Failed to save data:", err)
+            // Optionally show a toast notification for save errors
+        });
+    }
+  }, [appData, isLoading]);
+
   useEffect(() => {
     if (appData?.appName) {
       document.title = appData.appName;
     }
   }, [appData?.appName]);
-  
+
   const handleUpdateLink = useCallback((updatedLink: LinkItem) => {
-    setAppData(prevData => ({
-        ...prevData,
-        links: prevData.links.map(link => link.id === updatedLink.id ? updatedLink : link),
-    }));
+    setAppData(prevData => {
+        if (!prevData) return null;
+        return {
+            ...prevData,
+            links: prevData.links.map(link => link.id === updatedLink.id ? updatedLink : link),
+        };
+    });
     setEditingLink(null);
-  }, [setAppData]);
+  }, []);
 
   const handleDeleteLink = useCallback((id: string) => {
-    setAppData(prevData => ({
-        ...prevData,
-        links: prevData.links.filter(link => link.id !== id),
-    }));
-  }, [setAppData]);
+    setAppData(prevData => {
+        if (!prevData) return null;
+        return {
+            ...prevData,
+            links: prevData.links.filter(link => link.id !== id),
+        };
+    });
+  }, []);
 
   const handleToggleLink = useCallback((id: string) => {
      setAppData(prevData => {
+      if (!prevData) return null;
       const links = prevData.links.map(link => 
         link.id === id ? { ...link, enabled: !link.enabled } : link
       );
       return { ...prevData, links };
     });
-  }, [setAppData]);
+  }, []);
 
   const handleAppNameChange = useCallback((name: string) => {
-    setAppData(prevData => ({ ...prevData, appName: name }));
-  }, [setAppData]);
+    setAppData(prevData => prevData ? ({ ...prevData, appName: name }) : null);
+  }, []);
 
   const openAddModal = (type: 'link' | 'service') => {
     setEditingLink(null);
@@ -89,13 +159,14 @@ function App() {
       handleUpdateLink({ ...editingLink, ...linkData });
     } else {
        const newLink = { ...linkData, id: crypto.randomUUID(), enabled: true };
-       setAppData(prev => ({...prev, links: [...prev.links, newLink]}));
+       setAppData(prev => prev ? ({...prev, links: [...prev.links, newLink]}) : null);
     }
     closeModal();
   };
 
   const handleAddParsedLinks = useCallback((parsedLinks: Omit<LinkItem, 'id' | 'type' | 'proxyConfig' | 'enabled' | 'category'>[]) => {
       setAppData(prevData => {
+        if (!prevData) return null;
         const existingUrls = new Set(prevData.links.map(l => l.url));
         const newUniqueLinks = parsedLinks
             .filter(pl => !existingUrls.has(pl.url))
@@ -120,7 +191,15 @@ function App() {
         return prevData;
       });
       setView('dashboard'); 
-  }, [setAppData]);
+  }, []);
+
+  if (isLoading) {
+    return <LoadingState />;
+  }
+
+  if (error || !appData) {
+    return <ConnectionError onRetry={fetchData} error={error || 'Application data is missing.'} />;
+  }
 
   const filteredLinks = appData.links.filter(link => {
     const query = searchQuery.toLowerCase();
